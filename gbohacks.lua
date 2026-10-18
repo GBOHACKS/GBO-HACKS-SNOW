@@ -1412,12 +1412,17 @@ local function silentAimMove(dx,dy)
 end
 
 local function realScreenClick()
+    local vp=camera.ViewportSize
+    local cx=math.floor(vp.X/2 + math.random(-3,3))
+    local cy=math.floor(vp.Y/2 + math.random(-3,3))
+    local wasEnabled=gui.Enabled
+    gui.Enabled=false
     pcall(function()
-        VU:CaptureController()
-        VU:Button1Down(Vector2.new(0,0), camera.CFrame)
+        VIM:SendMouseButtonEvent(cx,cy,0,true,game,0)
         task.wait(0.02)
-        VU:Button1Up(Vector2.new(0,0), camera.CFrame)
+        VIM:SendMouseButtonEvent(cx,cy,0,false,game,0)
     end)
+    gui.Enabled=wasEnabled
 end
 
 local function applyStreamMode(on)
