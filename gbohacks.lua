@@ -1,4 +1,3 @@
-
 -- GBO HACKS (snow) v3.5
 local P=game:GetService("Players")
 local U=game:GetService("UserInputService")
@@ -1524,7 +1523,7 @@ R.RenderStepped:Connect(function(dt)
         local mv=Vector3.new()
         if U:IsKeyDown(Enum.KeyCode.W) then mv=mv+camera.CFrame.LookVector end
         if U:IsKeyDown(Enum.KeyCode.S) then mv=mv-camera.CFrame.LookVector end
-        if U:IsKeyDown(Enum.KeyCode.A) then mv=mv-camera.CFrame.RightVector end
+        if U:IsKeyDown(Enum.KeyCode.A) then mv=mv+camera.CFrame.RightVector end
         if U:IsKeyDown(Enum.KeyCode.D) then mv=mv+camera.CFrame.RightVector end
         if U:IsKeyDown(Enum.KeyCode.Space) then mv=mv+Vector3.new(0,1,0) end
         if U:IsKeyDown(Enum.KeyCode.LeftShift) then mv=mv-Vector3.new(0,1,0) end
