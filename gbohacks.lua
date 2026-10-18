@@ -495,7 +495,6 @@ end
 local function section(p,t) return make("TextLabel",{Size=UDim2.new(1,-5,0,32),BackgroundTransparency=1,Text=t,TextColor3=C.accent,TextSize=18,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=12},frames[p]) end
 local function info(p,t) return make("TextLabel",{Size=UDim2.new(1,-5,0,44),BackgroundTransparency=1,Text=t,TextWrapped=true,TextColor3=C.gray,TextSize=12,Font=Enum.Font.Gotham,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=12},frames[p]) end
 
--- Helper: expandable row base
 local function buildRow(parent,desc,height)
     local row=make("Frame",{Size=UDim2.new(1,-5,0,height or 44),BackgroundColor3=C.item,BorderSizePixel=0,ZIndex=12,ClipsDescendants=true},frames[parent])
     corner(row,8); stroke(row)
@@ -1413,17 +1412,12 @@ local function silentAimMove(dx,dy)
 end
 
 local function realScreenClick()
-    local vp=camera.ViewportSize
-    local cx=math.floor(vp.X/2 + math.random(-3,3))
-    local cy=math.floor(vp.Y/2 + math.random(-3,3))
-    local wasEnabled=gui.Enabled
-    gui.Enabled=false
     pcall(function()
-        VIM:SendMouseButtonEvent(cx,cy,0,true,game,0)
+        VU:CaptureController()
+        VU:Button1Down(Vector2.new(0,0), camera.CFrame)
         task.wait(0.02)
-        VIM:SendMouseButtonEvent(cx,cy,0,false,game,0)
+        VU:Button1Up(Vector2.new(0,0), camera.CFrame)
     end)
-    gui.Enabled=wasEnabled
 end
 
 local function applyStreamMode(on)
@@ -1568,14 +1562,14 @@ R.RenderStepped:Connect(function(dt)
         end
     end
 
-    if S.Aimbot and U:IsKeyDown(S.AimKey) then
+    if S.Aimbot and U:IsKeyDown(S.AimKey) and not main.Visible then
         local target=getClosestPlayerFromOrigin(S.AimFOV,S.AimTeamCheck,S.AimWallCheck,center)
         if target and target.Character and target.Character:FindFirstChild("Head") then
             camera.CFrame=CFrame.new(camera.CFrame.Position,target.Character.Head.Position)
         end
     end
 
-    if S.SilentAim and U:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+    if S.SilentAim and U:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not main.Visible then
         if not lockTarget or not validPlayer(lockTarget) then
             lockTarget=getClosestPlayerFromOrigin(S.SilentFOV,S.SilentTeamCheck,S.SilentWallCheck,mousePos)
         end
@@ -1593,7 +1587,7 @@ R.RenderStepped:Connect(function(dt)
         lockTarget=nil
     end
 
-    if S.TriggerBot then
+    if S.TriggerBot and not main.Visible then
         local target=getClosestPlayerFromOrigin(S.TriggerFOV,S.TriggerTeamCheck,false,center)
         if target and target.Character and target.Character:FindFirstChild("Head") then
             local head=target.Character.Head
