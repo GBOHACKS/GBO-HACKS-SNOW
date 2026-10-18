@@ -1,4 +1,4 @@
--- GBO HACKS (snow) v3.5
+-- GBO HACKS (snow) v3.7
 local P=game:GetService("Players")
 local U=game:GetService("UserInputService")
 local T=game:GetService("TweenService")
@@ -279,7 +279,7 @@ local welcome=make("Frame",{Name="Welcome",Size=UDim2.fromScale(1,1),BackgroundC
 local wg=make("Frame",{Size=UDim2.fromScale(0.5,0.3),Position=UDim2.fromScale(0.25,0.35),BackgroundColor3=C.ice,BackgroundTransparency=0.85,ZIndex=2001},welcome)
 corner(wg,20); stroke(wg,C.ice,0.5,2)
 make("TextLabel",{Size=UDim2.fromOffset(700,60),Position=UDim2.new(.5,-350,.4,-30),BackgroundTransparency=1,Text="❄  GBO HACKS  (snow)",TextColor3=C.ice,Font=Enum.Font.GothamBlack,TextSize=40,ZIndex=2002},welcome)
-make("TextLabel",{Size=UDim2.fromOffset(400,30),Position=UDim2.new(.5,-200,.5,-15),BackgroundTransparency=1,Text="v3.5  |  Loading...",TextColor3=C.textLight,Font=Enum.Font.GothamMedium,TextSize=16,ZIndex=2002},welcome)
+make("TextLabel",{Size=UDim2.fromOffset(400,30),Position=UDim2.new(.5,-200,.5,-15),BackgroundTransparency=1,Text="v3.7  |  Loading...",TextColor3=C.textLight,Font=Enum.Font.GothamMedium,TextSize=16,ZIndex=2002},welcome)
 
 task.delay(3,function()
     if welcome.Parent then
@@ -331,7 +331,7 @@ end)
 local top=make("Frame",{Name="Top",Size=UDim2.new(1,0,0,56),BackgroundColor3=C.panel,BorderSizePixel=0},main)
 corner(top,12)
 make("Frame",{Position=UDim2.new(0,0,1,-12),Size=UDim2.new(1,0,0,12),BackgroundColor3=C.panel,BorderSizePixel=0},top)
-make("TextLabel",{Position=UDim2.fromOffset(20,0),Size=UDim2.fromOffset(500,56),BackgroundTransparency=1,Text="❄  GBO HACKS  (snow)  v3.5",TextColor3=C.textDark,TextSize=22,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left},top)
+make("TextLabel",{Position=UDim2.fromOffset(20,0),Size=UDim2.fromOffset(500,56),BackgroundTransparency=1,Text="❄  GBO HACKS  (snow)  v3.7",TextColor3=C.textDark,TextSize=22,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left},top)
 
 local minimize=make("TextButton",{Position=UDim2.new(1,-95,0,13),Size=UDim2.fromOffset(36,30),BackgroundColor3=C.item,Text="—",TextColor3=C.textDark,TextSize=18,Font=Enum.Font.GothamBold},top)
 corner(minimize,7)
@@ -374,12 +374,14 @@ end)
 U.InputChanged:Connect(function(i)
     if floatDrag and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
         local df=i.Position-floatStartMouse
-        if math.abs(df.X)>4 or math.abs(df.Y)>4 then floatMoved=true end
-        floating.Position=UDim2.new(floatStartPos.X.Scale,floatStartPos.X.Offset+df.X,floatStartPos.Y.Scale,floatStartPos.Y.Offset+df.Y)
+        if math.abs(df.X)>5 or math.abs(df.Y)>5 then floatMoved=true end
+        if floatMoved then
+            floating.Position=UDim2.new(floatStartPos.X.Scale,floatStartPos.X.Offset+df.X,floatStartPos.Y.Scale,floatStartPos.Y.Offset+df.Y)
+        end
     end
 end)
 
-U.InputEnded:Connect(function(i)
+floating.InputEnded:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
         if floatDrag and not floatMoved then restorePanel() end
         floatDrag=false
@@ -757,7 +759,7 @@ actionButton("Home","↺  Restore Defaults",function()
 end,"Returns the character to normal game behavior.")
 
 section("Home","About the Panel:")
-info("Home","GBO HACKS v3.5 (snow) — PvP panel. Creators: GBO (owner), CHACOIA, JUNIN, TOPENTA, PEDRO.")
+info("Home","GBO HACKS v3.7 (snow) — PvP panel. Creators: GBO (owner), CHACOIA, JUNIN, TOPENTA, PEDRO.")
 local rejoin=make("TextButton",{Size=UDim2.new(1,-5,0,44),BackgroundColor3=C.item,Text="Rejoin",TextColor3=C.textDark,TextSize=12,Font=Enum.Font.GothamBold,ZIndex=12},frames.Home)
 corner(rejoin,8)
 rejoin.Activated:Connect(function() pcall(function() TP:Teleport(game.PlaceId,LP) end) end)
@@ -1415,14 +1417,11 @@ local function realScreenClick()
     local vp=camera.ViewportSize
     local cx=math.floor(vp.X/2 + math.random(-3,3))
     local cy=math.floor(vp.Y/2 + math.random(-3,3))
-    local wasEnabled=gui.Enabled
-    gui.Enabled=false
     pcall(function()
         VIM:SendMouseButtonEvent(cx,cy,0,true,game,0)
         task.wait(0.02)
         VIM:SendMouseButtonEvent(cx,cy,0,false,game,0)
     end)
-    gui.Enabled=wasEnabled
 end
 
 local function applyStreamMode(on)
@@ -1522,7 +1521,7 @@ R.RenderStepped:Connect(function(dt)
         local mv=Vector3.new()
         if U:IsKeyDown(Enum.KeyCode.W) then mv=mv+camera.CFrame.LookVector end
         if U:IsKeyDown(Enum.KeyCode.S) then mv=mv-camera.CFrame.LookVector end
-        if U:IsKeyDown(Enum.KeyCode.A) then mv=mv+camera.CFrame.RightVector end
+        if U:IsKeyDown(Enum.KeyCode.A) then mv=mv-camera.CFrame.RightVector end
         if U:IsKeyDown(Enum.KeyCode.D) then mv=mv+camera.CFrame.RightVector end
         if U:IsKeyDown(Enum.KeyCode.Space) then mv=mv+Vector3.new(0,1,0) end
         if U:IsKeyDown(Enum.KeyCode.LeftShift) then mv=mv-Vector3.new(0,1,0) end
@@ -1704,5 +1703,5 @@ end)
 
 applyMouseState()
 showPage("Home")
-notify("GBO HACKS (snow) v3.5 loaded ❄")
-print("[GBO HACKS (snow) v3.5] loaded.")
+notify("GBO HACKS (snow) v3.7 loaded ❄")
+print("[GBO HACKS (snow) v3.7] loaded.")
