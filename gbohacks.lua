@@ -1,4 +1,4 @@
--- GBO HACKS (snow) v3.7
+-- GBO HACKS (snow) v3.8
 local P=game:GetService("Players")
 local U=game:GetService("UserInputService")
 local T=game:GetService("TweenService")
@@ -64,9 +64,6 @@ local toggleSetters={}
 local spinThread=nil
 local fakeLagThread=nil
 local afkConn=nil
-local blListRefresh=nil
-local wlListRefresh=nil
-local lockTarget=nil
 local wasFlying=false
 local multiJumpLast=0
 
@@ -279,7 +276,7 @@ local welcome=make("Frame",{Name="Welcome",Size=UDim2.fromScale(1,1),BackgroundC
 local wg=make("Frame",{Size=UDim2.fromScale(0.5,0.3),Position=UDim2.fromScale(0.25,0.35),BackgroundColor3=C.ice,BackgroundTransparency=0.85,ZIndex=2001},welcome)
 corner(wg,20); stroke(wg,C.ice,0.5,2)
 make("TextLabel",{Size=UDim2.fromOffset(700,60),Position=UDim2.new(.5,-350,.4,-30),BackgroundTransparency=1,Text="❄  GBO HACKS  (snow)",TextColor3=C.ice,Font=Enum.Font.GothamBlack,TextSize=40,ZIndex=2002},welcome)
-make("TextLabel",{Size=UDim2.fromOffset(400,30),Position=UDim2.new(.5,-200,.5,-15),BackgroundTransparency=1,Text="v3.7  |  Loading...",TextColor3=C.textLight,Font=Enum.Font.GothamMedium,TextSize=16,ZIndex=2002},welcome)
+make("TextLabel",{Size=UDim2.fromOffset(400,30),Position=UDim2.new(.5,-200,.5,-15),BackgroundTransparency=1,Text="v3.8  |  Loading...",TextColor3=C.textLight,Font=Enum.Font.GothamMedium,TextSize=16,ZIndex=2002},welcome)
 
 task.delay(3,function()
     if welcome.Parent then
@@ -331,7 +328,7 @@ end)
 local top=make("Frame",{Name="Top",Size=UDim2.new(1,0,0,56),BackgroundColor3=C.panel,BorderSizePixel=0},main)
 corner(top,12)
 make("Frame",{Position=UDim2.new(0,0,1,-12),Size=UDim2.new(1,0,0,12),BackgroundColor3=C.panel,BorderSizePixel=0},top)
-make("TextLabel",{Position=UDim2.fromOffset(20,0),Size=UDim2.fromOffset(500,56),BackgroundTransparency=1,Text="❄  GBO HACKS  (snow)  v3.7",TextColor3=C.textDark,TextSize=22,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left},top)
+make("TextLabel",{Position=UDim2.fromOffset(20,0),Size=UDim2.fromOffset(500,56),BackgroundTransparency=1,Text="❄  GBO HACKS  (snow)  v3.8",TextColor3=C.textDark,TextSize=22,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left},top)
 
 local minimize=make("TextButton",{Position=UDim2.new(1,-95,0,13),Size=UDim2.fromOffset(36,30),BackgroundColor3=C.item,Text="—",TextColor3=C.textDark,TextSize=18,Font=Enum.Font.GothamBold},top)
 corner(minimize,7)
@@ -374,14 +371,12 @@ end)
 U.InputChanged:Connect(function(i)
     if floatDrag and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
         local df=i.Position-floatStartMouse
-        if math.abs(df.X)>5 or math.abs(df.Y)>5 then floatMoved=true end
-        if floatMoved then
-            floating.Position=UDim2.new(floatStartPos.X.Scale,floatStartPos.X.Offset+df.X,floatStartPos.Y.Scale,floatStartPos.Y.Offset+df.Y)
-        end
+        if math.abs(df.X)>4 or math.abs(df.Y)>4 then floatMoved=true end
+        floating.Position=UDim2.new(floatStartPos.X.Scale,floatStartPos.X.Offset+df.X,floatStartPos.Y.Scale,floatStartPos.Y.Offset+df.Y)
     end
 end)
 
-floating.InputEnded:Connect(function(i)
+U.InputEnded:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
         if floatDrag and not floatMoved then restorePanel() end
         floatDrag=false
@@ -461,7 +456,7 @@ local content=make("Frame",{Position=UDim2.fromOffset(224,68),Size=UDim2.new(1,-
 local pages={
     {"Home","⌂"},{"ESP","◉"},{"Aim","◎"},{"Silent Aim (RCL)","○"},
     {"Triggerbot","⌖"},{"Hitbox","▣"},{"Movement","↗"},{"Troll","♙"},
-    {"Lists","☰"},{"Keybinds","⌨"},{"Credits","©"}
+    {"Players","☰"},{"Keybinds","⌨"},{"Credits","©"}
 }
 local frames={}
 local nav={}
@@ -474,10 +469,6 @@ local function showPage(name)
         local yes=n==name
         b.BackgroundColor3=yes and C.ice or C.item
         b.TextColor3=yes and C.textLight or C.textDark
-    end
-    if name=="Lists" then
-        if blListRefresh then pcall(blListRefresh) end
-        if wlListRefresh then pcall(wlListRefresh) end
     end
 end
 
@@ -665,13 +656,133 @@ local function keyButton(p,t,settingName,default,desc)
     return function() return key end
 end
 
-local function localLists(p)
-    section(p,"Blacklist / Whitelist Local")
-    local addBL=textEntry(p,"Add to Blacklist","Name",nil,"Adds a name to blacklist (only affects these targets).")
-    actionButton(p,"+ BL",function() local n=addBL.Text; if n~="" and not table.find(S.Blacklist,n) then table.insert(S.Blacklist,1,n); notify("BL: "..n) end end)
-    local addWL=textEntry(p,"Add to Whitelist","Name",nil,"Adds a name to whitelist (bypasses ESP/aim).")
-    actionButton(p,"+ WL",function() local n=addWL.Text; if n~="" and not table.find(S.Whitelist,n) then table.insert(S.Whitelist,1,n); notify("WL: "..n) end end)
+-- LIST PANEL (NEW)
+local plFrame = make("Frame", {Name="PlayerListPanel", Size=UDim2.fromOffset(800, 500), Position=UDim2.new(0.5,-400,0.5,-250), BackgroundColor3=C.bg, BorderSizePixel=0, Visible=false, ZIndex=5000}, gui)
+corner(plFrame, 12); stroke(plFrame, C.ice, 0.4, 2)
+local plTop = make("Frame", {Size=UDim2.new(1,0,0,56), BackgroundColor3=C.panel, BorderSizePixel=0, ZIndex=5001}, plFrame)
+corner(plTop, 12)
+make("Frame",{Position=UDim2.new(0,0,1,-12),Size=UDim2.new(1,0,0,12),BackgroundColor3=C.panel,BorderSizePixel=0,ZIndex=5001},plTop)
+make("TextLabel", {Position=UDim2.fromOffset(20,0), Size=UDim2.new(1,-100,1,0), BackgroundTransparency=1, Text="❄  GBO HACKS  (Players)", TextColor3=C.textDark, Font=Enum.Font.GothamBold, TextSize=22, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5002}, plTop)
+local plClose = make("TextButton", {Position=UDim2.new(1,-51,0,13), Size=UDim2.fromOffset(36,30), BackgroundColor3=Color3.fromRGB(240,180,190), Text="×", TextColor3=C.textDark, Font=Enum.Font.GothamBold, TextSize=20, BorderSizePixel=0, ZIndex=5002}, plTop)
+corner(plClose, 7)
+plClose.Activated:Connect(function() plFrame.Visible = false end)
+
+do
+    local d,o,st=false,nil,nil
+    plTop.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then d=true;o=i.Position;st=plFrame.Position end
+    end)
+    U.InputChanged:Connect(function(i)
+        if d and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+            local df=i.Position-o
+            plFrame.Position=UDim2.new(st.X.Scale,st.X.Offset+df.X,st.Y.Scale,st.Y.Offset+df.Y)
+        end
+    end)
+    U.InputEnded:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then d=false end
+    end)
 end
+
+local plSearch = make("TextBox", {Position=UDim2.fromOffset(20,70), Size=UDim2.new(0,350,0,35), BackgroundColor3=C.item, PlaceholderText="Search player name...", TextColor3=C.textDark, PlaceholderColor3=C.gray, Font=Enum.Font.Gotham, TextSize=14, ZIndex=5001, BorderSizePixel=0}, plFrame)
+corner(plSearch, 8); stroke(plSearch)
+
+local plList = make("ScrollingFrame", {Position=UDim2.fromOffset(20,115), Size=UDim2.new(0,350,1,-135), BackgroundColor3=C.panel, BorderSizePixel=0, ScrollBarThickness=4, ScrollBarImageColor3=C.ice, ZIndex=5001, ClipsDescendants=true}, plFrame)
+corner(plList, 8)
+make("UIListLayout", {Padding=UDim.new(0,6), SortOrder=Enum.SortOrder.LayoutOrder}, plList)
+
+local rightPanel = make("Frame", {Position=UDim2.fromOffset(390,70), Size=UDim2.new(1,-410,1,-90), BackgroundColor3=C.item, ZIndex=5001, ClipsDescendants=true, BorderSizePixel=0}, plFrame)
+corner(rightPanel, 8)
+
+local selectedPlayerName = nil
+local selectedPlayerLabel = make("TextLabel", {Position=UDim2.fromOffset(10,10), Size=UDim2.new(1,-20,0,30), BackgroundTransparency=1, Text="Select a player", TextColor3=C.textDark, Font=Enum.Font.GothamBold, TextSize=14, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5002}, rightPanel)
+
+local blDisplay = make("ScrollingFrame", {Position=UDim2.fromOffset(10,240), Size=UDim2.new(0,150,0,180), BackgroundTransparency=1, BorderSizePixel=0, ScrollBarThickness=2, ScrollBarImageColor3=C.ice, ZIndex=5002}, rightPanel)
+make("UIListLayout", {Padding=UDim.new(0,2)}, blDisplay)
+
+local wlDisplay = make("ScrollingFrame", {Position=UDim2.fromOffset(170,240), Size=UDim2.new(0,150,0,180), BackgroundTransparency=1, BorderSizePixel=0, ScrollBarThickness=2, ScrollBarImageColor3=C.ice, ZIndex=5002}, rightPanel)
+make("UIListLayout", {Padding=UDim.new(0,2)}, wlDisplay)
+
+local function refreshListsDisplay()
+    for _, c in ipairs(blDisplay:GetChildren()) do if c:IsA("TextLabel") then c:Destroy() end end
+    for _, name in ipairs(S.Blacklist) do
+        make("TextLabel", {Size=UDim2.new(1,0,0,20), BackgroundTransparency=1, Text="[BL] "..name, TextColor3=Color3.fromRGB(220,80,100), Font=Enum.Font.Gotham, TextSize=12, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5002}, blDisplay)
+    end
+    for _, c in ipairs(wlDisplay:GetChildren()) do if c:IsA("TextLabel") then c:Destroy() end end
+    for _, name in ipairs(S.Whitelist) do
+        make("TextLabel", {Size=UDim2.new(1,0,0,20), BackgroundTransparency=1, Text="[WL] "..name, TextColor3=Color3.fromRGB(80,200,120), Font=Enum.Font.Gotham, TextSize=12, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5002}, wlDisplay)
+    end
+end
+
+local function createActionBtn(text, y, callback, color)
+    local btn = make("TextButton", {Position=UDim2.fromOffset(10,y), Size=UDim2.new(1,-20,0,30), BackgroundColor3=color or C.bg, Text=text, TextColor3=C.textDark, Font=Enum.Font.GothamBold, TextSize=12, ZIndex=5002, BorderSizePixel=0}, rightPanel)
+    corner(btn, 6); stroke(btn)
+    btn.Activated:Connect(callback)
+    return btn
+end
+
+createActionBtn("Add to Whitelist", 50, function()
+    if selectedPlayerName and not table.find(S.Whitelist, selectedPlayerName) then
+        table.insert(S.Whitelist, selectedPlayerName)
+        notify("Added WL: "..selectedPlayerName)
+        refreshListsDisplay()
+    end
+end)
+
+createActionBtn("Remove from Whitelist", 90, function()
+    if selectedPlayerName then
+        local i = table.find(S.Whitelist, selectedPlayerName)
+        if i then table.remove(S.Whitelist, i); notify("Removed WL: "..selectedPlayerName); refreshListsDisplay() end
+    end
+end)
+
+createActionBtn("Add to Blacklist", 140, function()
+    if selectedPlayerName and not table.find(S.Blacklist, selectedPlayerName) then
+        table.insert(S.Blacklist, selectedPlayerName)
+        notify("Added BL: "..selectedPlayerName)
+        refreshListsDisplay()
+    end
+end, Color3.fromRGB(255,150,150))
+
+createActionBtn("Remove from Blacklist", 180, function()
+    if selectedPlayerName then
+        local i = table.find(S.Blacklist, selectedPlayerName)
+        if i then table.remove(S.Blacklist, i); notify("Removed BL: "..selectedPlayerName); refreshListsDisplay() end
+    end
+end)
+
+make("TextLabel", {Position=UDim2.fromOffset(10,220), Size=UDim2.new(1,-20,0,20), BackgroundTransparency=1, Text="Current Lists:", TextColor3=C.accent, Font=Enum.Font.GothamBold, TextSize=14, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5002}, rightPanel)
+
+local function refreshPlayerList()
+    for _, c in ipairs(plList:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+    local query = string.lower(plSearch.Text)
+    for _, p in ipairs(P:GetPlayers()) do
+        if p ~= LP then
+            if query == "" or string.find(string.lower(p.Name), query, 1, true) then
+                local row = make("TextButton", {Size=UDim2.new(1,-10,0,40), BackgroundColor3=C.bg, Text="", AutoButtonColor=false, ZIndex=5002, BorderSizePixel=0}, plList)
+                corner(row, 6); stroke(row)
+                
+                local img = make("ImageLabel", {Position=UDim2.fromOffset(5,5), Size=UDim2.fromOffset(30,30), BackgroundTransparency=1, Image="rbxthumb://type=AvatarHeadShot&id="..p.UserId.."&w=48&h=48", ZIndex=5003}, row)
+                corner(img, 15)
+                
+                make("TextLabel", {Position=UDim2.fromOffset(45,0), Size=UDim2.new(1,-45,1,0), BackgroundTransparency=1, Text=p.Name, TextColor3=C.textDark, Font=Enum.Font.GothamBold, TextSize=13, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5003}, row)
+                
+                row.Activated:Connect(function()
+                    selectedPlayerName = p.Name
+                    selectedPlayerLabel.Text = "Selected: "..p.Name
+                end)
+            end
+        end
+    end
+end
+
+plSearch:GetPropertyChangedSignal("Text"):Connect(refreshPlayerList)
+
+plFrame:GetPropertyChangedSignal("Visible"):Connect(function() 
+    if plFrame.Visible then 
+        refreshPlayerList() 
+        refreshListsDisplay()
+    end 
+end)
 
 -- HOME
 section("Home","Welcome to GBO HACKS")
@@ -712,7 +823,6 @@ redButton("Home","🛑  DISABLE EVERYTHING",function()
     S.Box=false;S.Name=false;S.Distance=false;S.Health=false;S.ESPTraces=false;S.Skeleton=false
     S.ShowAimFOV=false;S.ShowSilentFOV=false;S.ShowTriggerFOV=false
     S.HitboxRainbow=false;S.SQRainbow=false
-    lockTarget=nil
     for _,data in pairs(highlights) do
         if data.box then data.box.Visible=false end
         if data.healthBar then data.healthBar.Visible=false end
@@ -759,7 +869,7 @@ actionButton("Home","↺  Restore Defaults",function()
 end,"Returns the character to normal game behavior.")
 
 section("Home","About the Panel:")
-info("Home","GBO HACKS v3.7 (snow) — PvP panel. Creators: GBO (owner), CHACOIA, JUNIN, TOPENTA, PEDRO.")
+info("Home","GBO HACKS v3.8 (snow) — PvP panel. Creators: GBO (owner), CHACOIA, JUNIN, TOPENTA, PEDRO.")
 local rejoin=make("TextButton",{Size=UDim2.new(1,-5,0,44),BackgroundColor3=C.item,Text="Rejoin",TextColor3=C.textDark,TextSize=12,Font=Enum.Font.GothamBold,ZIndex=12},frames.Home)
 corner(rejoin,8)
 rejoin.Activated:Connect(function() pcall(function() TP:Teleport(game.PlaceId,LP) end) end)
@@ -775,11 +885,10 @@ toggle("ESP","Box ESP","Box",false,nil,"Draws a box around each player.")
 toggle("ESP","Skeleton ESP","Skeleton",false,nil,"Draws bones on each player.")
 toggle("ESP","Traces ESP","ESPTraces",false,nil,"Lines from your character to each target.")
 toggle("ESP","Team check","ESPTeamCheck",false,nil,"Ignores teammates.")
-toggle("ESP","Wall check","ESPWallCheck",false,nil,"Only shows targets in line of sight.")
+toggle("ESP","Wall check (Color)","ESPWallCheck",false,nil,"Red when occluded, Green when visible.")
 colorButton("ESP","ESP color","ESPColor","Pick the color used by all ESP elements.")
 rainbowButton("ESP","Rainbow color","Rainbow",nil,"Cycles colors on every ESP element.")
 slider("ESP","Max distance",50,2000,500,"MaxDist",nil,"Farthest distance ESP will render.")
-localLists("ESP")
 
 -- AIM
 section("Aim","Aim settings")
@@ -792,7 +901,6 @@ slider("Aim","FOV size",20,500,120,"AimFOV",nil,"Radius of the aim FOV.")
 colorButton("Aim","FOV color","AimFOVColor","Color of the aim circle.")
 rainbowButton("Aim","Rainbow FOV","Rainbow",nil,"Cycles the FOV color.")
 keyButton("Aim","Aim key","AimKey",Enum.KeyCode.Q,"Hold this key to aim.")
-localLists("Aim")
 
 -- SILENT AIM (RCL)
 local rcl="Silent Aim (RCL)"
@@ -806,7 +914,6 @@ slider(rcl,"FOV size",20,500,100,"SilentFOV",nil,"Radius of the silent FOV aroun
 colorButton(rcl,"FOV color","SilentFOVColor","Color of the silent circle.")
 rainbowButton(rcl,"Rainbow FOV","Rainbow",nil,"Cycles the FOV color.")
 keyButton(rcl,"Silent key","SilentKey",Enum.KeyCode.E,"Hold this key to activate silent aim.")
-localLists(rcl)
 
 -- TRIGGER
 section("Triggerbot","Triggerbot settings")
@@ -821,7 +928,6 @@ slider("Triggerbot","FOV size",10,400,80,"TriggerFOV",nil,"Radius of the trigger
 colorButton("Triggerbot","FOV color","TriggerFOVColor","Color of the trigger circle.")
 rainbowButton("Triggerbot","Rainbow FOV","Rainbow",nil,"Cycles the FOV color.")
 keyButton("Triggerbot","Trigger key","TriggerKey",Enum.KeyCode.T,"Hold to enable triggerbot.")
-localLists("Triggerbot")
 
 -- HITBOX
 local hb="Hitbox"
@@ -848,7 +954,6 @@ actionButton(hb,"Swap visual (head / circle)",function()
     refreshAllHitboxes()
     notify("Visual: "..(S.HitboxVisual=="circle" and "Circle" or "Head"))
 end,"Toggle between a real head mesh and a circle ball.")
-localLists(hb)
 
 -- MOVEMENT
 section("Movement","Movement")
@@ -982,74 +1087,12 @@ actionButton("Troll","▶  Spectate player",function()
 end,"Follows the typed player's view.")
 actionButton("Troll","Stop spectating",function() S.Spectate=false; S.SpectateTarget=nil; notify("Stopped") end,"Returns the camera to you.")
 
--- LISTS
-section("Lists","Manage Blacklist / Whitelist")
-info("Lists","Blacklist: aim/trigger/hitbox only target these. Whitelist: ESP/aim ignore these.")
-
-local function addToList(listName,name)
-    if not name or name=="" then return end
-    local list=S[listName]
-    if not table.find(list,name) then table.insert(list,1,name); notify(listName..": "..name) end
-end
-
-local function removeFromList(listName,name)
-    local list=S[listName]
-    local i=table.find(list,name)
-    if i then table.remove(list,i); notify("Removed from "..listName..": "..name) end
-end
-
-local blAddInput=textEntry("Lists","Add to Blacklist","Player name",nil,"Only these players will be targeted.")
-actionButton("Lists","+ Add to Blacklist",function() addToList("Blacklist",blAddInput.Text) end,"Adds the typed name.")
-local wlAddInput=textEntry("Lists","Add to Whitelist","Player name",nil,"These players are ignored by ESP/aim.")
-actionButton("Lists","+ Add to Whitelist",function() addToList("Whitelist",wlAddInput.Text) end,"Adds the typed name.")
-
-local blRemoveInput=textEntry("Lists","Remove from Blacklist","Player name",nil,"Removes a name from blacklist.")
-actionButton("Lists","- Remove from Blacklist",function() removeFromList("Blacklist",blRemoveInput.Text) end,"Removes the typed name.")
-local wlRemoveInput=textEntry("Lists","Remove from Whitelist","Player name",nil,"Removes a name from whitelist.")
-actionButton("Lists","- Remove from Whitelist",function() removeFromList("Whitelist",wlRemoveInput.Text) end,"Removes the typed name.")
-
-actionButton("Lists","Clear Blacklist",function() S.Blacklist={}; notify("Blacklist cleared"); if blListRefresh then blListRefresh() end end,"Removes every name from blacklist.")
-actionButton("Lists","Clear Whitelist",function() S.Whitelist={}; notify("Whitelist cleared"); if wlListRefresh then wlListRefresh() end end,"Removes every name from whitelist.")
-
-section("Lists","Players in Blacklist")
-local blContainer=make("Frame",{Size=UDim2.new(1,-5,0,10),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,ZIndex=12},frames["Lists"])
-make("UIListLayout",{Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},blContainer)
-
-section("Lists","Players in Whitelist")
-local wlContainer=make("Frame",{Size=UDim2.new(1,-5,0,10),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,ZIndex=12},frames["Lists"])
-make("UIListLayout",{Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},wlContainer)
-
-local function makePlayerCard(container,playerName)
-    local card=make("Frame",{Size=UDim2.new(1,0,0,58),BackgroundColor3=C.item,BorderSizePixel=0,ZIndex=12},container)
-    corner(card,8); stroke(card)
-    local thumb=make("ImageLabel",{Position=UDim2.fromOffset(6,6),Size=UDim2.fromOffset(46,46),BackgroundColor3=C.bg,Image="",ScaleType=Enum.ScaleType.Crop,ZIndex=12},card)
-    corner(thumb,23)
-    make("TextLabel",{Position=UDim2.fromOffset(60,8),Size=UDim2.new(1,-90,0,20),BackgroundTransparency=1,Text=playerName,TextColor3=C.textDark,TextSize=13,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=12},card)
-    make("TextLabel",{Position=UDim2.fromOffset(60,28),Size=UDim2.new(1,-90,0,18),BackgroundTransparency=1,Text="@"..playerName,TextColor3=C.gray,TextSize=11,Font=Enum.Font.Gotham,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=12},card)
-    task.spawn(function()
-        local targetPlayer=P:FindFirstChild(playerName)
-        if targetPlayer then
-            local ok,url=pcall(function() return P:GetUserThumbnailAsync(targetPlayer.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size100x100) end)
-            if ok and thumb.Parent then thumb.Image=url end
-        end
-    end)
-end
-
-local function refreshList(container,list)
-    for _,c in ipairs(container:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
-    if #list==0 then return end
-    for _,name in ipairs(list) do makePlayerCard(container,name) end
-end
-
-blListRefresh=function() refreshList(blContainer,S.Blacklist) end
-wlListRefresh=function() refreshList(wlContainer,S.Whitelist) end
-
-task.spawn(function()
-    while gui.Parent do
-        if frames["Lists"] and frames["Lists"].Visible then pcall(blListRefresh); pcall(wlListRefresh) end
-        task.wait(1)
-    end
-end)
+-- PLAYERS (NEW LIST PAGE)
+section("Players","Player Management")
+info("Players","Open the dedicated player list panel to manage Blacklist and Whitelist.")
+actionButton("Players","Open Player List",function()
+    plFrame.Visible = true
+end,"Opens the player list panel.")
 
 -- KEYBINDS
 local kp="Keybinds"
@@ -1171,7 +1214,9 @@ local function hasWallBetween(t)
 end
 
 local function inList(list,name)
-    for _,n in ipairs(list) do if n==name then return true end end
+    for _,n in ipairs(list) do 
+        if string.lower(n) == string.lower(name) then return true end 
+    end
     return false
 end
 
@@ -1193,6 +1238,7 @@ local RBONES={{"Head","Torso"},{"Torso","HumanoidRootPart"},{"Torso","Left Arm"}
 local function createESPForPlayer(p)
     if not p.Character then return end
     local data={}
+    data.char=p.Character
     data.box=make("Frame",{Size=UDim2.fromOffset(0,0),BackgroundTransparency=1,ZIndex=30,Visible=false},gui)
     data.boxStroke=stroke(data.box,S.ESPColor,1.5,0)
     data.healthBar=make("Frame",{Size=UDim2.fromOffset(4,0),BackgroundColor3=Color3.fromRGB(30,30,30),BackgroundTransparency=0.3,ZIndex=31,Visible=false},gui)
@@ -1233,7 +1279,17 @@ local function updateTrace(p)
     local tPos,tOn=camera:WorldToViewportPoint(targetRoot.Position)
     if not myOn or not tOn then line.Visible=false; return end
     line.From=Vector2.new(myPos.X,myPos.Y); line.To=Vector2.new(tPos.X,tPos.Y)
-    line.Color=S.ESPColor; line.Visible=true
+    
+    local head = p.Character:FindFirstChild("Head")
+    if S.ESPWallCheck and head and hasWallBetween(head) then
+        line.Color = Color3.fromRGB(255, 50, 50)
+    elseif S.ESPWallCheck then
+        line.Color = Color3.fromRGB(50, 255, 50)
+    else
+        line.Color = S.ESPColor
+    end
+    
+    line.Visible=true
 end
 
 local function updateSkeleton(p)
@@ -1268,7 +1324,10 @@ local function updateESP()
         if not inList(S.Whitelist,p.Name) then
             if validPlayer(p) and not isFriendly(p,S.ESPTeamCheck) then
                 seen[p]=true
-                if not highlights[p] then createESPForPlayer(p) end
+                if not highlights[p] or highlights[p].char ~= p.Character then
+                    removeHighlight(p)
+                    createESPForPlayer(p)
+                end
                 local data=highlights[p]
                 if data then
                     local hum=p.Character:FindFirstChildOfClass("Humanoid")
@@ -1277,7 +1336,7 @@ local function updateESP()
                     if hum and root and head then
                         local dist=(camera.CFrame.Position-root.Position).Magnitude
                         local skip=S.StreamMode or dist>S.MaxDist
-                        if not skip and S.ESPWallCheck and hasWallBetween(head) then skip=true end
+                        
                         if skip then
                             data.box.Visible=false; data.healthBar.Visible=false
                             if data.billboard then data.billboard.Enabled=false end
@@ -1285,9 +1344,21 @@ local function updateESP()
                             if drawingTraces[p] then drawingTraces[p].Visible=false end
                             if drawingSkeletons[p] then for _,l in ipairs(drawingSkeletons[p]) do l.Visible=false end end
                         elseif S.ESP then
+                            local isOccluded = S.ESPWallCheck and hasWallBetween(head)
+                            local currentColor = S.ESPColor
+                            
+                            if S.ESPWallCheck then
+                                if isOccluded then
+                                    currentColor = Color3.fromRGB(255, 50, 50)
+                                else
+                                    currentColor = Color3.fromRGB(50, 255, 50)
+                                end
+                            end
+                            
                             data.highlight.Enabled=true
-                            data.highlight.FillColor=S.ESPColor
-                            data.highlight.OutlineColor=S.ESPColor
+                            data.highlight.FillColor=currentColor
+                            data.highlight.OutlineColor=currentColor
+                            
                             local headSP,headOn=camera:WorldToViewportPoint(head.Position)
                             local feetSP,feetOn=camera:WorldToViewportPoint(root.Position-Vector3.new(0,3,0))
                             if headOn and feetOn and headSP.Z>0 then
@@ -1297,7 +1368,7 @@ local function updateESP()
                                     data.box.Visible=true
                                     data.box.Size=UDim2.fromOffset(width,height)
                                     data.box.Position=UDim2.fromOffset(headSP.X-width/2,headSP.Y)
-                                    data.boxStroke.Color=S.ESPColor
+                                    data.boxStroke.Color=currentColor
                                     data.boxStroke.Thickness=1.5
                                     data.boxStroke.Transparency=0
                                 else data.box.Visible=false end
@@ -1322,7 +1393,7 @@ local function updateESP()
                                         if txt~="" then txt=txt.." | " end
                                         txt=txt..math.floor(dist).."m"
                                     end
-                                    data.text.Text=txt; data.text.TextColor3=S.ESPColor
+                                    data.text.Text=txt; data.text.TextColor3=currentColor
                                 else data.billboard.Enabled=false end
                             end
                             updateTrace(p)
@@ -1521,7 +1592,7 @@ R.RenderStepped:Connect(function(dt)
         local mv=Vector3.new()
         if U:IsKeyDown(Enum.KeyCode.W) then mv=mv+camera.CFrame.LookVector end
         if U:IsKeyDown(Enum.KeyCode.S) then mv=mv-camera.CFrame.LookVector end
-        if U:IsKeyDown(Enum.KeyCode.A) then mv=mv-camera.CFrame.RightVector end
+        if U:IsKeyDown(Enum.KeyCode.A) then mv=mv+camera.CFrame.RightVector end
         if U:IsKeyDown(Enum.KeyCode.D) then mv=mv+camera.CFrame.RightVector end
         if U:IsKeyDown(Enum.KeyCode.Space) then mv=mv+Vector3.new(0,1,0) end
         if U:IsKeyDown(Enum.KeyCode.LeftShift) then mv=mv-Vector3.new(0,1,0) end
@@ -1703,5 +1774,5 @@ end)
 
 applyMouseState()
 showPage("Home")
-notify("GBO HACKS (snow) v3.7 loaded ❄")
-print("[GBO HACKS (snow) v3.7] loaded.")
+notify("GBO HACKS (snow) v3.8 loaded ❄")
+print("[GBO HACKS (snow) v3.8] loaded.")
