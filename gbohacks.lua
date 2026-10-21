@@ -41,6 +41,7 @@ local S={
     Noclip=false,Fly=false,Freecam=false,Rainbow=false,
     StreamMode=false,MouseFree=false,
     HitboxEnabled=false,HitboxMode="head",HitboxSize=3,HitboxTransparency=0,HitboxVisual="head",HitboxRainbow=false,
+    HitboxOffsetX=0,HitboxOffsetY=0,HitboxOffsetZ=0,
     SQSize=5,SQTransparency=0.7,SQColor=C.ice,SQRainbow=false,SQTeamCheck=false,
     SnowEnabled=true,
     Fullbright=false,AntiAFK=false,
@@ -53,6 +54,7 @@ local S={
 local highlights={}
 local drawingTraces={}
 local drawingSkeletons={}
+local drawingHeadCircles={}
 local sqOriginal={}
 local freecam={enabled=false,pos=Vector3.new(0,10,0),yaw=0,pitch=0}
 local originalCFrame,originalCameraType=nil,nil
@@ -100,6 +102,10 @@ local function resetHeadForPlayer(p)
         local marker=head:FindFirstChild("HitboxMarker")
         if marker then marker:Destroy() end
     end
+    local neck = p.Character:FindFirstChild("Neck") or (p.Character:FindFirstChild("UpperTorso") and p.Character.UpperTorso:FindFirstChild("Neck"))
+    if neck and p.Character:FindFirstChild("OriginalNeckC0") then
+        neck.C0 = p.Character.OriginalNeckC0.Value
+    end
 end
 
 local function applyHitboxToPlayer(p)
@@ -112,6 +118,18 @@ local function applyHitboxToPlayer(p)
     if S.HitboxRainbow then head.Color=Color3.fromHSV((os.clock()*0.2)%1,1,1) end
     local oldMarker=head:FindFirstChild("HitboxMarker")
     if oldMarker then oldMarker:Destroy() end
+    
+    local neck = p.Character:FindFirstChild("Neck") or (p.Character:FindFirstChild("UpperTorso") and p.Character.UpperTorso:FindFirstChild("Neck"))
+    if neck then
+        if not p.Character:FindFirstChild("OriginalNeckC0") then
+            local c0 = Instance.new("CFrameValue", p.Character)
+            c0.Name = "OriginalNeckC0"
+            c0.Value = neck.C0
+        end
+        local ox, oy, oz = S.HitboxOffsetX or 0, S.HitboxOffsetY or 0, S.HitboxOffsetZ or 0
+        neck.C0 = p.Character.OriginalNeckC0.Value * CFrame.new(ox, oy, oz)
+    end
+
     if S.HitboxVisual=="circle" then
         local marker=Instance.new("Part")
         marker.Name="HitboxMarker"; marker.Shape=Enum.PartType.Ball
@@ -656,7 +674,7 @@ local function keyButton(p,t,settingName,default,desc)
     return function() return key end
 end
 
--- LIST PANEL (NEW)
+-- PLAYER LIST UI (New Panel)
 local plFrame = make("Frame", {Name="PlayerListPanel", Size=UDim2.fromOffset(800, 500), Position=UDim2.new(0.5,-400,0.5,-250), BackgroundColor3=C.bg, BorderSizePixel=0, Visible=false, ZIndex=5000}, gui)
 corner(plFrame, 12); stroke(plFrame, C.ice, 0.4, 2)
 local plTop = make("Frame", {Size=UDim2.new(1,0,0,56), BackgroundColor3=C.panel, BorderSizePixel=0, ZIndex=5001}, plFrame)
@@ -831,6 +849,7 @@ redButton("Home","🛑  DISABLE EVERYTHING",function()
     end
     for _,t in pairs(drawingTraces) do t.Visible=false end
     for _,t in pairs(drawingSkeletons) do t.Visible=false end
+    for _,c in pairs(drawingHeadCircles) do c.Visible=false end
     clearAllHitbox(); clearAllSQ()
     setFullbright(false); setAntiAFK(false)
     if LP.Character then
@@ -945,6 +964,15 @@ end,"Size of the hitbox in studs (up to 100).")
 slider(hb,"Hitbox transparency",0,100,0,"HitboxTransparency",function(v)
     S.HitboxTransparency=v/100; S.SQTransparency=v/100; refreshAllHitboxes()
 end,"How transparent the hitbox is (0 = solid).")
+slider(hb,"Offset X",-10,10,0,"HitboxOffsetX",function(v)
+    refreshAllHitboxes()
+end,"Move hitbox left/right.")
+slider(hb,"Offset Y",-10,10,0,"HitboxOffsetY",function(v)
+    refreshAllHitboxes()
+end,"Move hitbox up/down.")
+slider(hb,"Offset Z",-10,10,0,"HitboxOffsetZ",function(v)
+    refreshAllHitboxes()
+end,"Move hitbox forward/backward.")
 colorButton(hb,"Hitbox color","SQColor","Color of the square hitbox.")
 rainbowButton(hb,"Rainbow hitbox","HitboxRainbow",function(v)
     S.SQRainbow=v; refreshAllHitboxes()
@@ -1214,9 +1242,7 @@ local function hasWallBetween(t)
 end
 
 local function inList(list,name)
-    for _,n in ipairs(list) do 
-        if string.lower(n) == string.lower(name) then return true end 
-    end
+    for _,n in ipairs(list) do if n==name then return true end end
     return false
 end
 
@@ -1230,6 +1256,7 @@ local function removeHighlight(p)
         for _,line in ipairs(drawingSkeletons[p]) do pcall(function() line:Remove() end) end
         drawingSkeletons[p]=nil
     end
+    if drawingHeadCircles[p] then pcall(function() drawingHeadCircles[p]:Remove() end); drawingHeadCircles[p]=nil end
 end
 
 local BONES={{"Head","UpperTorso"},{"UpperTorso","LowerTorso"},{"LowerTorso","HumanoidRootPart"},{"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},{"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},{"LowerTorso","LeftUpperLeg"},{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},{"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"}}
@@ -1238,7 +1265,6 @@ local RBONES={{"Head","Torso"},{"Torso","HumanoidRootPart"},{"Torso","Left Arm"}
 local function createESPForPlayer(p)
     if not p.Character then return end
     local data={}
-    data.char=p.Character
     data.box=make("Frame",{Size=UDim2.fromOffset(0,0),BackgroundTransparency=1,ZIndex=30,Visible=false},gui)
     data.boxStroke=stroke(data.box,S.ESPColor,1.5,0)
     data.healthBar=make("Frame",{Size=UDim2.fromOffset(4,0),BackgroundColor3=Color3.fromRGB(30,30,30),BackgroundTransparency=0.3,ZIndex=31,Visible=false},gui)
@@ -1250,19 +1276,30 @@ local function createESPForPlayer(p)
         data.billboard.Adornee=head
         data.text=make("TextLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",TextColor3=S.ESPColor,Font=Enum.Font.GothamBold,TextSize=11,TextStrokeTransparency=0.5,ZIndex=34},data.billboard)
     end
-    if Drawing and Drawing.new then
-        local line=Drawing.new("Line")
-        line.Thickness=1.5; line.Color=S.ESPColor; line.Transparency=0.7; line.Visible=false
-        drawingTraces[p]=line
-        local skel={}
-        local bones=p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.RigType==Enum.HumanoidRigType.R15 and BONES or RBONES
-        for _=1,#bones do
-            local l=Drawing.new("Line")
-            l.Thickness=1.5; l.Color=S.ESPColor; l.Transparency=0.6; l.Visible=false
-            table.insert(skel,l)
+    pcall(function()
+        if Drawing and Drawing.new then
+            local line=Drawing.new("Line")
+            line.Thickness=1.5; line.Color=S.ESPColor; line.Transparency=0.7; line.Visible=false
+            drawingTraces[p]=line
+            local skel={}
+            local bones=p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.RigType==Enum.HumanoidRigType.R15 and BONES or RBONES
+            for _=1,#bones do
+                local l=Drawing.new("Line")
+                l.Thickness=1.5; l.Color=S.ESPColor; l.Transparency=0.6; l.Visible=false
+                table.insert(skel,l)
+            end
+            drawingSkeletons[p]=skel
+            
+            local circle = Drawing.new("Circle")
+            circle.Thickness = 1.5
+            circle.Color = S.ESPColor
+            circle.Transparency = 0.6
+            circle.Visible = false
+            circle.NumSides = 20
+            circle.Filled = false
+            drawingHeadCircles[p] = circle
         end
-        drawingSkeletons[p]=skel
-    end
+    end)
     highlights[p]=data
 end
 
@@ -1294,14 +1331,24 @@ end
 
 local function updateSkeleton(p)
     local skel=drawingSkeletons[p]
+    local circle=drawingHeadCircles[p]
     if not skel then return end
     if S.StreamMode or not S.ESP or not S.Skeleton or not validPlayer(p) then
         for _,l in ipairs(skel) do l.Visible=false end
+        if circle then circle.Visible = false end
         return
     end
     local char=p.Character
     local rig=char:FindFirstChild("Humanoid") and char.Humanoid.RigType==Enum.HumanoidRigType.R15
     local bones=rig and BONES or RBONES
+    
+    local head = char:FindFirstChild("Head")
+    local isOccluded = S.ESPWallCheck and head and hasWallBetween(head)
+    local currentColor = S.ESPColor
+    if S.ESPWallCheck then
+        if isOccluded then currentColor = Color3.fromRGB(255, 50, 50) else currentColor = Color3.fromRGB(50, 255, 50) end
+    end
+
     for i,b in ipairs(bones) do
         local a1=char:FindFirstChild(b[1])
         local a2=char:FindFirstChild(b[2])
@@ -1311,11 +1358,26 @@ local function updateSkeleton(p)
             local s2,o2=camera:WorldToViewportPoint(a2.Position)
             if o1 and o2 then
                 line.From=Vector2.new(s1.X,s1.Y); line.To=Vector2.new(s2.X,s2.Y)
-                line.Color=S.ESPColor; line.Visible=true
+                line.Color=currentColor; line.Visible=true
             else line.Visible=false end
         else line.Visible=false end
     end
     for i=#bones+1,#skel do skel[i].Visible=false end
+    
+    if circle and head then
+        local headSP, headOn = camera:WorldToViewportPoint(head.Position)
+        local topSP, topOn = camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+        if headOn and topOn then
+            circle.Position = Vector2.new(headSP.X, headSP.Y)
+            circle.Radius = math.max(math.abs(headSP.Y - topSP.Y) * 1.2, 5)
+            circle.Color = currentColor
+            circle.Visible = true
+        else
+            circle.Visible = false
+        end
+    elseif circle then
+        circle.Visible = false
+    end
 end
 
 local function updateESP()
@@ -1324,10 +1386,7 @@ local function updateESP()
         if not inList(S.Whitelist,p.Name) then
             if validPlayer(p) and not isFriendly(p,S.ESPTeamCheck) then
                 seen[p]=true
-                if not highlights[p] or highlights[p].char ~= p.Character then
-                    removeHighlight(p)
-                    createESPForPlayer(p)
-                end
+                if not highlights[p] then createESPForPlayer(p) end
                 local data=highlights[p]
                 if data then
                     local hum=p.Character:FindFirstChildOfClass("Humanoid")
@@ -1343,6 +1402,7 @@ local function updateESP()
                             if data.highlight then data.highlight.Enabled=false end
                             if drawingTraces[p] then drawingTraces[p].Visible=false end
                             if drawingSkeletons[p] then for _,l in ipairs(drawingSkeletons[p]) do l.Visible=false end end
+                            if drawingHeadCircles[p] then drawingHeadCircles[p].Visible = false end
                         elseif S.ESP then
                             local isOccluded = S.ESPWallCheck and hasWallBetween(head)
                             local currentColor = S.ESPColor
@@ -1404,6 +1464,7 @@ local function updateESP()
                             data.highlight.Enabled=false
                             if drawingTraces[p] then drawingTraces[p].Visible=false end
                             if drawingSkeletons[p] then for _,l in ipairs(drawingSkeletons[p]) do l.Visible=false end end
+                            if drawingHeadCircles[p] then drawingHeadCircles[p].Visible = false end
                         end
                     end
                 end
@@ -1510,6 +1571,7 @@ local function applyStreamMode(on)
         end
         for _,t in pairs(drawingTraces) do t.Visible=false end
         for _,sk in pairs(drawingSkeletons) do for _,l in ipairs(sk) do l.Visible=false end end
+        for _,c in pairs(drawingHeadCircles) do c.Visible=false end
     else
         main.Visible=guiVisibleBeforeStream; statusBar.Visible=true
         for _,n in ipairs(notes:GetChildren()) do if n:IsA("TextLabel") then n.Visible=true end end
